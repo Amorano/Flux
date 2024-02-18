@@ -1,44 +1,46 @@
 import dearpygui.dearpygui as dpg
 import numpy as np
+
 class Particle:
-    def __init__(self, parent, pos=[0.0,0.0], vel=[0.0,0.0], acc=[0.0,0.0]) -> None:
+    def __init__(self, parent, pos=[0.0, 0.0], vel=[0.0, 0.0], acc=[0.0, 0.0]) -> None:
         self.pos = np.array(pos)
         self.vel = np.array(vel)
         self.acc = np.array(acc)
         self.prev_pos = np.array(pos)
         self.parent = parent
         self.p = None
+        self._speed_limit = 16
 
-    def update(self):
-        self.prev_pos = np.copy(self.pos)
+    def update(self, acc_rand:bool=True):
+        self.prev_pos[:] = self.pos  # Update prev_pos in place
         self.vel += self.acc
-        self.vel = self.clamp(self.vel, 4)
+        if acc_rand:
+            self.vel += [0.00025 - np.random.random() * 0.0005, 0.00025 - np.random.random() * 0.0005]
+
+        self.vel = self.clamp(self.vel, self._speed_limit)
         self.pos += self.vel
-        self.acc = np.array([0.0,0.0])
-        # self.p = dpg.draw_circle(center=self.pos, radius=3, fill=[255,255,255,50], color=[255,255,255,50], parent=self.parent)
-        self.p = dpg.draw_line(p1=self.pos, p2=self.prev_pos, color=[255,255,255,255], parent=self.parent)
+        if self.p:
+            dpg.configure_item(self.p, p1=self.pos, p2=self.prev_pos)
+        else:
+            color = [
+                (r := int(self.vel[0] * 255)),
+                (g := int(self.vel[1] * 255)),
+                int((r + g) * 0.5),
+                255 ]
+            print(color)
+            self.p = dpg.draw_line(p1=self.pos, p2=self.prev_pos, color=color, parent=self.parent)
+        self.acc[:] = 0.0  # Reset acc to [0.0, 0.0] in place
         return self.p
-    
-    def apply_force(self, force):
-        self.acc = [self.acc[0] + force[0], self.acc[1] + force[1]]
-    
+
     def warp_around_edges(self, width, height):
-        if self.pos[0] > width-1: self.pos[0] = 0 
-        if self.pos[0] < 0: self.pos[0] = width-1
+        self.pos[0] = (self.pos[0] + width) % width
+        self.pos[1] = (self.pos[1] + height) % height
 
-        if self.pos[1] > height-1: self.pos[1] = 0 
-        if self.pos[1] < 0: self.pos[1] = height-1
-
-
-    def follow(self, force):
-
-        self.apply_force(force=force)
+    def apply_force(self, force):
+        self.acc += force
 
     def clamp(self, v, n_max):
-        n = float(np.sqrt(np.sum(v**2)))
+        n = np.linalg.norm(v)
         if n > n_max:
-            v *= (n_max/n)
+            v *= (n_max / n)
         return v
-        # f = min(n, n_max) / n
-        # return [f*x, f*y]
- 
