@@ -12,7 +12,7 @@ class Particle:
         self._speed_limit = 16
 
     def update(self, acc_rand:bool=True):
-        self.prev_pos[:] = self.pos  # Update prev_pos in place
+        self.prev_pos = self.pos.copy()
         self.vel += self.acc
         if acc_rand:
             self.vel += [0.00025 - np.random.random() * 0.0005, 0.00025 - np.random.random() * 0.0005]
@@ -27,9 +27,8 @@ class Particle:
                 (g := int(self.vel[1] * 255)),
                 int((r + g) * 0.5),
                 255 ]
-            print(color)
             self.p = dpg.draw_line(p1=self.pos, p2=self.prev_pos, color=color, parent=self.parent)
-        self.acc[:] = 0.0  # Reset acc to [0.0, 0.0] in place
+        self.acc[:] = 0.0
         return self.p
 
     def warp_around_edges(self, width, height):

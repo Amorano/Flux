@@ -6,6 +6,8 @@ from util import timeit
 
 random_seed()
 
+TAU = np.pi * 2
+
 _scale = 40
 _cols = 20
 _rows = 20
@@ -45,9 +47,7 @@ def _handle_frame_buffer(sender, buffer):
     with dpg.mutex():
         if dpg.does_item_exist("flowfield"):
             if dpg.does_item_exist('prev_frame'):
-            if dpg.does_item_exist('prev_frame'):
                 dpg.set_value('prev_frame', buffer)
-            else:
             else:
                 with dpg.texture_registry():
                     width = dpg.get_viewport_client_width()
@@ -65,8 +65,6 @@ def _handle_frame_buffer(sender, buffer):
             # Run the next update as soon as we can - something needs an extra frame
             # to render correctly; might be the texture.  That's why we skip a frame.
             dpg.set_frame_callback(dpg.get_frame_count()+2, callback=lambda: dpg.output_frame_buffer(callback=_handle_frame_buffer))
-
-TAU = np.pi * 2
 
 @timeit
 # original -- more or less
