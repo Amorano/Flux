@@ -45,7 +45,9 @@ def _handle_frame_buffer(sender, buffer):
     with dpg.mutex():
         if dpg.does_item_exist("flowfield"):
             if dpg.does_item_exist('prev_frame'):
+            if dpg.does_item_exist('prev_frame'):
                 dpg.set_value('prev_frame', buffer)
+            else:
             else:
                 with dpg.texture_registry():
                     width = dpg.get_viewport_client_width()
