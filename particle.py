@@ -15,20 +15,17 @@ class Particle:
         self.prev_pos = self.pos.copy()
         self.vel += self.acc
         if acc_rand:
-            self.vel += [0.00025 - np.random.random() * 0.0005, 0.00025 - np.random.random() * 0.0005]
-
+            self.vel += [0.025 - np.random.random() * 0.05, 0.025 - np.random.random() * 0.05]
         self.vel = self.clamp(self.vel, self._speed_limit)
         self.pos += self.vel
+        r = 128 + int((self.vel[0] / self._speed_limit) * 128)
+        g = 128 + int((self.vel[1] / self._speed_limit) * 128)
+        color = [ r, g, 128, int((r + g) * 0.5) ]
         if self.p:
-            dpg.configure_item(self.p, p1=self.pos, p2=self.prev_pos)
+            dpg.configure_item(self.p, p1=self.pos, p2=self.prev_pos, color=color)
         else:
-            color = [
-                (r := int(self.vel[0] * 255)),
-                (g := int(self.vel[1] * 255)),
-                int((r + g) * 0.5),
-                255 ]
-            self.p = dpg.draw_line(p1=self.pos, p2=self.prev_pos, color=color, parent=self.parent)
-        self.acc[:] = 0.0
+            self.p = dpg.draw_line(p1=self.pos, p2=self.prev_pos, color=[0,0,0,255], parent=self.parent)
+        self.acc *= (np.random.random() * 0.85)
         return self.p
 
     def warp_around_edges(self, width, height):

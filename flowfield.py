@@ -8,14 +8,17 @@ random_seed()
 
 TAU = np.pi * 2
 
-_scale = 40
-_cols = 20
-_rows = 20
-particles_total = 2500
+_scale = 90
+_cols = 10
+_rows = 10
+particles_total = 2000
 x_coords, y_coords = np.meshgrid(np.linspace(0, 1, _cols), np.linspace(0, 1, _rows))
 
 _width = _cols * _scale
 _height = _rows * _scale
+_x = np.arange(_cols)/_cols
+_y = np.arange(_rows)/_rows
+
 _bg_color = [0,0,0,255]
 dpg.create_context()
 dpg.create_viewport(title='Custom Title', width=_width, height=_height, resizable=False)
@@ -23,27 +26,24 @@ dpg.setup_dearpygui()
 
 def recalc_particles(flowfield, flowfield_z, z):
     if z - flowfield_z >= 0.01:
-        flowfield = _flowfield(_cols, _rows, z)
+        flowfield = _flowfield(z)
         flowfield_z = z
 
     for particle in particles:
         x = (particle.pos[0] // _scale) % _cols
         y = particle.pos[1] // _scale
-        if x < 0 or x >= _cols or y < 0 or y >= _rows:
-            continue
-        idx = int(x + y * _cols)
-        force = flowfield[idx]
-        particle.apply_force(force)
+        angle = flowfield[int(y)][int(x)]
+        particle.apply_force((np.cos(angle), np.sin(angle)))
         particle.update()
         particle.warp_around_edges(_width, _height)
     return flowfield, flowfield_z
 
 z = 0
-inc = 0.01
+inc = 0.001
 flowfield = []
 flowfield_z = -1
 
-def _handle_frame_buffer(sender, buffer):
+def _handle_frame_buffer(sender, buffer) -> None:
     with dpg.mutex():
         if dpg.does_item_exist("flowfield"):
             if dpg.does_item_exist('prev_frame'):
@@ -57,26 +57,19 @@ def _handle_frame_buffer(sender, buffer):
                 # Adding a dimmer - once and for good
                 _background(opacity=10)
 
-            # We've stored current picture into the background texture and
-            # are now ready to move particles around.
             global flowfield, flowfield_z, z, inc
             flowfield, flowfield_z = recalc_particles(flowfield, flowfield_z, z)
             z += inc
+
             # Run the next update as soon as we can - something needs an extra frame
             # to render correctly; might be the texture.  That's why we skip a frame.
             dpg.set_frame_callback(dpg.get_frame_count()+2, callback=lambda: dpg.output_frame_buffer(callback=_handle_frame_buffer))
 
 @timeit
 # original -- more or less
-def _flowfield(cols, rows, z) -> list:
-    flowfield = []
-    # x_coords, y_coords = np.meshgrid(np.linspace(0, 1, cols), np.linspace(0, 1, rows))
-    for y in range(rows):
-        for x in range(cols):
-            r = noise3(x_coords[x, y], y_coords[x, y], z)
-            angle = r * TAU
-            flowfield.append((np.cos(angle), np.sin(angle)))
-    return flowfield
+def _flowfield(z) -> list:
+    global _x, _y
+    return noise3array(_x, _y, np.array([z]))[0] * TAU
 
 def _background(clr=_bg_color[:3], opacity=255):
     x, y = dpg.get_viewport_client_width(), dpg.get_viewport_client_height()
