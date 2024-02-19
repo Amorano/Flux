@@ -9,7 +9,7 @@ class Particle:
         self.prev_pos = np.array(pos)
         self.parent = parent
         self.p = None
-        self._speed_limit = 16
+        self._speed_limit = 5
 
     def update(self, acc_rand:bool=True):
         self.prev_pos = self.pos.copy()

@@ -1,14 +1,16 @@
+
 import dearpygui.dearpygui as dpg
-from opensimplex import random_seed, noise3, noise3array
+from opensimplex import random_seed, noise3array
 from particle import Particle
 import numpy as np
+from PIL import Image
 from util import timeit
 
 random_seed()
 
 TAU = np.pi * 2
 
-_scale = 90
+_scale = 45
 _cols = 10
 _rows = 10
 particles_total = 2000
@@ -24,22 +26,22 @@ dpg.create_context()
 dpg.create_viewport(title='Custom Title', width=_width, height=_height, resizable=False)
 dpg.setup_dearpygui()
 
-def recalc_particles(flowfield, flowfield_z, z):
-    if z - flowfield_z >= 0.01:
-        flowfield = _flowfield(z)
-        flowfield_z = z
+def recalc_particles(vector_field: list, vector_field_z: float, zt: float) -> tuple[list, float]:
+    if z - vector_field_z >= 0.01:
+        vector_field = _flowfield(zt)
+        vector_field_z = zt
 
-    for particle in particles:
-        x = (particle.pos[0] // _scale) % _cols
-        y = particle.pos[1] // _scale
-        angle = flowfield[int(y)][int(x)]
-        particle.apply_force((np.cos(angle), np.sin(angle)))
+    force = [(np.cos(vector_field[int(particle.pos[1] // _scale)][int((particle.pos[0] // _scale) % _cols)]),
+            np.sin(vector_field[int(particle.pos[1] // _scale)][int((particle.pos[0] // _scale) % _cols)]))
+            for particle in particles]
+
+    for idx, particle in enumerate(particles):
+        particle.apply_force(force[idx])
         particle.update()
         particle.warp_around_edges(_width, _height)
-    return flowfield, flowfield_z
+    return vector_field, vector_field_z
 
 z = 0
-inc = 0.001
 flowfield = []
 flowfield_z = -1
 
@@ -56,17 +58,21 @@ def _handle_frame_buffer(sender, buffer) -> None:
                 dpg.add_image('prev_frame', parent='flowfield', pos=(0,0))
                 # Adding a dimmer - once and for good
                 _background(opacity=10)
+                #with open("alex.txt", "w", encoding="utf-8") as f:
+                #    f.write(buffer)
 
-            global flowfield, flowfield_z, z, inc
+                #img = Image.fromarray(buffer)
+                # img.save()
+
+            global flowfield, flowfield_z, z
             flowfield, flowfield_z = recalc_particles(flowfield, flowfield_z, z)
-            z += inc
+            z += np.random.random() * 0.02
 
             # Run the next update as soon as we can - something needs an extra frame
             # to render correctly; might be the texture.  That's why we skip a frame.
             dpg.set_frame_callback(dpg.get_frame_count()+2, callback=lambda: dpg.output_frame_buffer(callback=_handle_frame_buffer))
 
-@timeit
-# original -- more or less
+# @timeit
 def _flowfield(z) -> list:
     global _x, _y
     return noise3array(_x, _y, np.array([z]))[0] * TAU
@@ -94,8 +100,8 @@ with dpg.window(label="FlowField", tag='flowfield', width=_width, height=_height
         particles.append(p)
 
 dpg.show_viewport()
+dpg.set_viewport_vsync(False)
+#dpg.show_metrics()
 dpg.set_frame_callback(5, callback=lambda: dpg.output_frame_buffer(callback=_handle_frame_buffer))
 dpg.start_dearpygui()
-#dpg.show_metrics()
-#dpg.set_viewport_vsync(False)
 dpg.destroy_context()
